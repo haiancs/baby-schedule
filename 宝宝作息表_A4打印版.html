@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>宝宝一日作息表（打印版）</title>
+<style>
+    /* 基础样式，大字体适合长辈阅读 */
+    body {
+        font-family: "Microsoft YaHei", -apple-system, sans-serif;
+        color: #222;
+        line-height: 1.5;
+        background: #e0e0e0;
+        margin: 0;
+        padding: 0;
+    }
+    
+    /* 模拟A4纸张的显示效果 */
+    .a4-page {
+        width: 210mm;
+        height: 297mm;
+        padding: 15mm 20mm;
+        margin: 10mm auto;
+        background: white;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        box-sizing: border-box;
+        position: relative;
+    }
+
+    /* 打印时的专属样式，确保分页正确且没有阴影背景 */
+    @media print {
+        body { background: none; margin: 0; padding: 0; }
+        .a4-page {
+            margin: 0;
+            padding: 10mm 15mm;
+            border: none;
+            box-shadow: none;
+            width: 100%;
+            height: 100%;
+            page-break-after: always; /* 强制分页 */
+        }
+    }
+
+    /* 标题样式 */
+    h1 { 
+        text-align: center; 
+        font-size: 28px; 
+        margin-top: 0;
+        margin-bottom: 20px; 
+        padding-bottom: 10px;
+    }
+    .title-gong { color: #d32f2f; border-bottom: 3px solid #d32f2f; }
+    .title-po { color: #1976d2; border-bottom: 3px solid #1976d2; }
+
+    /* 时间块样式 */
+    .time-block {
+        margin-bottom: 15px;
+        padding: 12px 15px;
+        border-radius: 8px;
+        background: #f8f9fa;
+        border-left: 6px solid #4caf50;
+    }
+    
+    /* 股市高亮 */
+    .time-block.stock {
+        border-left-color: #f44336;
+        background: #fff5f5;
+    }
+    /* 休息高亮 */
+    .time-block.rest {
+        border-left-color: #2196f3;
+        background: #f0f8ff;
+    }
+    /* 做饭高亮 */
+    .time-block.cook {
+        border-left-color: #ff9800;
+        background: #fff8f0;
+    }
+
+    .time { 
+        font-weight: bold; 
+        font-size: 20px; 
+        color: #333; 
+        display: inline-block;
+        margin-bottom: 5px;
+    }
+    
+    .tag {
+        font-size: 16px;
+        font-weight: normal;
+        margin-left: 10px;
+        padding: 2px 8px;
+        border-radius: 4px;
+        background: #eee;
+    }
+    
+    .stock-tag { background: #ffebee; color: #c62828; font-weight: bold;}
+    .rest-tag { background: #e3f2fd; color: #1565c0; font-weight: bold;}
+
+    .task { 
+        font-size: 19px; /* 大字体方便老人看 */
+        margin-top: 5px; 
+    }
+
+    .task strong {
+        color: #d32f2f;
+    }
+
+    /* 底部提示区 */
+    .tips {
+        margin-top: 25px;
+        padding: 15px;
+        background: #fff8e1;
+        border: 2px dashed #ffb300;
+        border-radius: 8px;
+        font-size: 18px;
+    }
+    .tips-title {
+        font-weight: bold;
+        color: #f57c00;
+        margin-bottom: 10px;
+        font-size: 20px;
+    }
+    ul { margin: 0; padding-left: 20px; }
+    li { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+    <!-- 第一页：外公版 -->
+    <div class="a4-page">
+        <h1 class="title-gong">👴 外公专属作息表（主攻：盯盘 + 厨房）</h1>
+        
+        <div class="time-block">
+            <div class="time">08:00 - 08:30 <span class="tag">早餐与家务</span></div>
+            <div class="task">准备全家早餐，大家吃完后，负责清洗餐具、收拾厨房。</div>
+        </div>
+
+        <div class="time-block cook">
+            <div class="time">08:30 - 09:30 <span class="tag">黄金备菜期</span></div>
+            <div class="task">趁还没开盘，<strong>提前把中午要炒的菜洗好、切好</strong>。准备好茶水，打开电脑准备看盘。</div>
+        </div>
+
+        <div class="time-block stock">
+            <div class="time">09:30 - 11:30 <span class="tag stock-tag">📈 早盘时间</span></div>
+            <div class="task">外婆会把宝宝带出门，家里保持绝对安静，<strong>安心盯盘炒股</strong>。（11:15左右顺手去厨房把电饭煲按下去煮饭）</div>
+        </div>
+
+        <div class="time-block cook">
+            <div class="time">11:30 - 12:15 <span class="tag">厨房主场</span></div>
+            <div class="task">股市休盘。早上已经切好菜了，直接下锅快炒，保证全家吃上热饭。</div>
+        </div>
+
+        <div class="time-block">
+            <div class="time">12:15 - 13:00 <span class="tag">饭后收尾</span></div>
+            <div class="task">吃完饭收拾碗筷，清理厨房。准备迎接下午开盘。</div>
+        </div>
+
+        <div class="time-block stock">
+            <div class="time">13:00 - 15:00 <span class="tag stock-tag">📉 下午盘时间</span></div>
+            <div class="task">此时宝宝和外婆都在午休，家里依然是绝对安静的，<strong>安心操盘直到收盘</strong>。</div>
+        </div>
+
+        <div class="time-block">
+            <div class="time">15:00 - 16:30 <span class="tag">收盘接力</span></div>
+            <div class="task">股市收盘，<strong>彻底接手带娃，让外婆去休息</strong>。喂宝宝吃点水果，陪宝宝在围栏里多爬行，或推车下楼溜达。</div>
+        </div>
+
+        <div class="time-block cook">
+            <div class="time">16:30 - 18:00 <span class="tag">准备晚餐</span></div>
+            <div class="task">外婆重新接手宝宝。外公进厨房洗菜、做晚饭，确保孩子们18:00下班回家能吃上饭。</div>
+        </div>
+
+        <div class="time-block rest">
+            <div class="time">18:00 以后 <span class="tag rest-tag">🎉 彻底下班</span></div>
+            <div class="task">孩子们下班回家接手宝宝，外公可以去复盘股票、看新闻、散步。</div>
+        </div>
+
+        <div class="tips">
+            <div class="tips-title">💡 给外公的特别提示：</div>
+            <ul>
+                <li><strong>安全第一：</strong> 看盘时如果外婆不在，务必把宝宝放进安全围栏里，千万不能让宝宝离开视线。</li>
+                <li><strong>多爬少走：</strong> 陪娃玩时，让宝宝在地上多爬，不用弯腰牵着走，保护您的腰椎！</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 第二页：外婆版 -->
+    <div class="a4-page">
+        <h1 class="title-po">👵 外婆专属作息表（主攻：带娃 + 科学育儿）</h1>
+        
+        <div class="time-block">
+            <div class="time">08:00 - 08:30 <span class="tag">辅食早餐</span></div>
+            <div class="task">协助宝宝洗脸洗手。<strong>把宝宝放进餐椅吃辅食</strong>，坚守“离开餐椅就收走食物、绝不追喂”的规矩。</div>
+        </div>
+
+        <div class="time-block">
+            <div class="time">08:30 - 09:30 <span class="tag">室内活动</span></div>
+            <div class="task">外公备菜时，让宝宝在围栏里自己爬行玩耍。准备出门的妈咪包（水壶、纸尿裤、汗巾等）。</div>
+        </div>
+
+        <div class="time-block">
+            <div class="time">09:30 - 11:30 <span class="tag">☀️ 户外放电</span></div>
+            <div class="task">为了不打扰外公炒股，带宝宝去小区或公园玩。多晒太阳多活动。（如果10:30宝宝困了，可以在推车里眯一会儿）。</div>
+        </div>
+
+        <div class="time-block">
+            <div class="time">11:30 - 12:15 <span class="tag">午餐时光</span></div>
+            <div class="task">安排宝宝坐餐椅吃午饭。可以给宝宝几块煮软的胡萝卜等“手指食物”让他自己抓着吃。</div>
+        </div>
+
+        <div class="time-block">
+            <div class="time">12:15 - 13:00 <span class="tag">睡眠仪式</span></div>
+            <div class="task">喂宝宝喝午睡奶。<strong>切记不奶睡：</strong>喝完奶后，给宝宝擦擦牙，读一本短绘本，再拉窗帘哄睡。</div>
+        </div>
+
+        <div class="time-block rest">
+            <div class="time">13:00 - 15:00 <span class="tag rest-tag">💤 黄金回血期</span></div>
+            <div class="task">宝宝进入长午睡。<strong>外婆请务必跟着一起睡，或者躺着休息！</strong> 绝对不要在这个时间去做家务，养足体力最重要。</div>
+        </div>
+
+        <div class="time-block">
+            <div class="time">15:00 - 16:30 <span class="tag">辅助与放松</span></div>
+            <div class="task">慢慢起床。外公收盘接手带娃了，外婆可以喝杯水，在旁边看着，或者处理一点自己的私事。</div>
+        </div>
+
+        <div class="time-block">
+            <div class="time">16:30 - 18:00 <span class="tag">傍晚陪伴</span></div>
+            <div class="task">外公去做晚饭，外婆接手。喂宝宝喝一顿傍晚奶，陪宝宝在客厅听听儿歌、玩积木。</div>
+        </div>
+
+        <div class="time-block rest">
+            <div class="time">18:00 以后 <span class="tag rest-tag">🎉 彻底下班</span></div>
+            <div class="task">孩子们下班接手，外婆可以去跳广场舞、看电视或出门散步。洗奶瓶、洗澡等脏活累活全交给孩子们。</div>
+        </div>
+
+        <div class="tips">
+            <div class="tips-title">💡 给外婆的特别提示：</div>
+            <ul>
+                <li><strong>抓紧休息：</strong> 下午1点-3点是您唯一的回血时间，千万不要去洗衣服拖地，一定要躺下休息！</li>
+                <li><strong>建立规矩：</strong> 坚持“吃饭坐餐椅”、“不奶睡”，规矩养成了，以后带娃会越来越轻松。</li>
+            </ul>
+        </div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "eventsync",
+  "version": "1.0.0",
+  "description": "Routine events CRUD cloud function",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "@cloudbase/node-sdk": "^2.11.2"
+  }
+}
