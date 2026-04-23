@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { CloudContext, auth } from '../cloudContext';
+import { tryCompleteWechatOAuthFromUrl } from '../utils/wechatWebAuth';
 
 const AuthContext = createContext(null);
 
@@ -9,6 +10,16 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        try {
+          await tryCompleteWechatOAuthFromUrl();
+        } catch (oauthErr) {
+          console.error('WeChat OAuth callback:', oauthErr);
+          const u = new URL(window.location.href);
+          if (u.searchParams.get('code')) {
+            u.search = '';
+            window.history.replaceState(null, '', u.pathname + u.hash);
+          }
+        }
         const loginState = await auth.getLoginState();
         setUser(loginState ? (auth.currentUser || true) : null);
       } catch {
