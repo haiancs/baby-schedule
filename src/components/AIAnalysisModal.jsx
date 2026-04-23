@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { cloudbase } from '../utils/cloudbase';
-import { getWeeklyEvents } from '../api/eventSync';
+import { getWeeklyDailyDocs } from '../api/eventSync';
 import { getBabyProfile } from '../api/babyProfile';
 
 function getWeekDateRange() {
@@ -12,7 +12,7 @@ function getWeekDateRange() {
   return { startDate: start, endDate: endDate };
 }
 
-function buildPlainText(dailyDocs) {
+export function buildPlainText(dailyDocs) {
   if (!dailyDocs || dailyDocs.length === 0) return '本周暂无作息数据';
   const sorted = [...dailyDocs].sort((a, b) => a.date.localeCompare(b.date));
   const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
@@ -91,7 +91,7 @@ export default function AIAnalysisModal({ isOpen, onClose }) {
     try {
       const { startDate, endDate } = getWeekDateRange();
       const [weeklyData, babyProfile] = await Promise.all([
-        getWeeklyEvents(startDate, endDate),
+        getWeeklyDailyDocs(startDate, endDate),
         getBabyProfile()
       ]);
 

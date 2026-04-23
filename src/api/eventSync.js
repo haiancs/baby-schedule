@@ -116,3 +116,51 @@ export const getWeeklyEvents = async (startDate, endDate) => {
     return results;
   }
 };
+
+export const getWeeklyDailyDocs = async (startDate, endDate) => {
+  if (!isLoggedIn()) {
+    const results = [];
+    const dStart = new Date(startDate);
+    const dEnd = new Date(endDate);
+    for (let d = new Date(dStart); d <= dEnd; d.setDate(d.getDate() + 1)) {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+      const events = getLocalEvents(dateStr);
+      if (events.length > 0) {
+        results.push({ date: dateStr, events });
+      }
+    }
+    return results;
+  }
+
+  try {
+    const db = getDb();
+    const _ = db.command;
+    const { data } = await db.collection(COLLECTION)
+      .where({ date: _.gte(startDate).and(_.lte(endDate)) })
+      .get();
+
+    return (data || []).map(doc => ({
+      date: doc.date,
+      events: Array.isArray(doc.events) ? doc.events : [],
+    }));
+  } catch (e) {
+    console.warn('云端周数据读取失败，回退本地', e);
+    const results = [];
+    const dStart = new Date(startDate);
+    const dEnd = new Date(endDate);
+    for (let d = new Date(dStart); d <= dEnd; d.setDate(d.getDate() + 1)) {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+      const events = getLocalEvents(dateStr);
+      if (events.length > 0) {
+        results.push({ date: dateStr, events });
+      }
+    }
+    return results;
+  }
+};
