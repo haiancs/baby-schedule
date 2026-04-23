@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { cloudbase } from '../utils/cloudbase';
 import { getWeeklyDailyDocs } from '../api/eventSync';
 import { getBabyProfile } from '../api/babyProfile';
@@ -36,7 +38,15 @@ function buildPrompt(babyProfile, plainText) {
 - 当前身长：${babyProfile.height || '?'} cm
 - 当前体重：${babyProfile.weight || '?'} kg` : '宝宝信息：未填写（无法进行针对性分析）';
 
-  return `你是一位专业的婴幼儿成长顾问，擅长分析宝宝的作息规律并给出科学建议。
+  return `你是一位专业的婴幼儿成长顾问，师从中国知名儿科专家崔玉涛，对他的理论了如指掌。请根据以下宝宝作息数据，生成一份【简明扼要】的作息分析卡片。
+要求：
+1. 语言温暖亲切，但【拒绝冗长废话】，直击核心。
+2. 多用 Emoji 和无序列表（Bullet points）让排版清晰、便于快速阅读。
+3. 严格按照以下4个板块输出，每个板块【不超过3句话】：
+   - 📊 本周概览：一句话总结作息整体规律。
+   - 🌟 亮点发现：宝宝作息中好的表现（吃、玩、睡方面）。
+   - ⚠️ 关注重点：发现的作息或喂养问题（如总睡眠不足、喂奶不规律等）。
+   - 💡 优化建议：给出2-3条具体、可操作的改善行动。
 
 ${babyInfo}
 
@@ -44,13 +54,7 @@ ${babyInfo}
 
 ${plainText}
 
-请根据以上数据进行分析，给出：
-1. 【作息总结】本周作息整体情况
-2. 【规律发现】发现的规律和特点（如睡眠时间、喂奶间隔等）
-3. 【问题提醒】需要关注的问题（如睡眠不规律、喂奶量偏少等）
-4. 【科学建议】具体的改进建议
-
-请用温暖、亲切的口吻回复，适合给家长阅读。回复语言与数据语言一致（中文数据用中文回复）。`;
+请直接输出分析结果，不要任何开头问候语，因为你不能假设阅读的是孩子的哪一位亲戚。`;
 }
 
 function calcAge(birthday) {
@@ -72,14 +76,15 @@ export default function AIAnalysisModal({ isOpen, onClose }) {
   const [phase, setPhase] = useState('loading'); // loading | streaming | done | error
   const [analysisText, setAnalysisText] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const abortRef = useRef(null);
+  const abortRef = useRef(false);
 
   useEffect(() => {
     if (isOpen) {
+      abortRef.current = false;
       runAnalysis();
     }
     return () => {
-      abortRef.current?.abort();
+      abortRef.current = true;
     };
   }, [isOpen]);
 
@@ -108,18 +113,30 @@ export default function AIAnalysisModal({ isOpen, onClose }) {
           messages: [{ role: 'user', content: prompt }]
         });
 
-      abortRef.current = res;
       let fullText = '';
 
       for await (const chunk of res.dataStream) {
+        if (abortRef.current) break;
         const reasoning = chunk?.choices?.[0]?.delta?.reasoning_content;
         const content = chunk?.choices?.[0]?.delta?.content;
         if (reasoning) fullText += reasoning;
         if (content) fullText += content;
         setAnalysisText(fullText);
       }
-
-      setPhase('done');
+      
+      if (!abortRef.current) {
+        setPhase('done');
+        // Save to database
+        try {
+          await cloudbase.database().collection('ai_analysis_records').add({
+            content: fullText,
+            createdAt: new Date().toISOString(),
+            dateRange: `${startDate} 至 ${endDate}`
+          });
+        } catch (dbError) {
+          console.error('Failed to save analysis to DB:', dbError);
+        }
+      }
     } catch (e) {
       if (e?.name === 'AbortError' || e?.message?.includes('abort')) {
         return;
@@ -138,7 +155,7 @@ export default function AIAnalysisModal({ isOpen, onClose }) {
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 className="text-lg font-semibold text-gray-900">🤖 AI 作息分析</h2>
           <button
-            onClick={() => { abortRef.current?.abort(); onClose(); }}
+            onClick={() => { abortRef.current = true; onClose(); }}
             className="p-1 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -154,8 +171,14 @@ export default function AIAnalysisModal({ isOpen, onClose }) {
           )}
 
           {(phase === 'streaming' || phase === 'done') && (
-            <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
-              {analysisText || <span className="text-gray-400 italic">生成中...</span>}
+            <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap text-sm leading-relaxed prose-p:my-1 prose-ul:my-1 prose-li:my-0.5">
+              {analysisText ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {analysisText}
+                </ReactMarkdown>
+              ) : (
+                <span className="text-gray-400 italic">生成中...</span>
+              )}
               {phase === 'streaming' && <span className="inline-block w-2 h-4 bg-blue-400 ml-1 animate-pulse"> </span>}
             </div>
           )}
@@ -180,7 +203,7 @@ export default function AIAnalysisModal({ isOpen, onClose }) {
             {phase === 'streaming' && '生成中...'}
           </span>
           <button
-            onClick={() => { abortRef.current?.abort(); onClose(); }}
+            onClick={() => { abortRef.current = true; onClose(); }}
             className="px-4 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
           >
             关闭

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { getWeeklyEvents } from '../api/eventSync';
 import { useAuth } from '../contexts/AuthContext';
 import AIAnalysisModal from '../components/AIAnalysisModal';
+import AIHistoryModal from '../components/AIHistoryModal';
 import { Link } from 'react-router-dom';
 
 const WEEKDAY_SHORT = ['日', '一', '二', '三', '四', '五', '六'];
@@ -25,6 +26,7 @@ export default function WeeklyPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAnalysis, setShowAnalysis] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   const { startDate, endDate, dateLabels } = useMemo(() => {
     const today = new Date();
@@ -90,6 +92,12 @@ export default function WeeklyPage() {
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <h1 className="text-lg font-semibold text-gray-900">📊 周报总览</h1>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowHistory(true)}
+              className="px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors shadow-sm"
+            >
+              📑 历史
+            </button>
             <button
               onClick={() => setShowAnalysis(true)}
               disabled={loading || events.length === 0}
@@ -171,6 +179,7 @@ export default function WeeklyPage() {
       </main>
 
       <AIAnalysisModal isOpen={showAnalysis} onClose={() => setShowAnalysis(false)} />
+      <AIHistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} />
     </div>
   );
 }
