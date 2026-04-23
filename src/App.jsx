@@ -2,24 +2,25 @@ import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'reac
 import { AnimatePresence } from 'framer-motion'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
 import DailyPage from './pages/DailyPage'
 import WeeklyPage from './pages/WeeklyPage'
 import './App.css'
 
+const SKIP_AUTH = false;
+
 function AnimatedRoutes() {
   const location = useLocation();
   const { isLoggedIn } = useAuth();
+  const needsAuth = !SKIP_AUTH;
 
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/login" element={isLoggedIn ? <Navigate to="/daily" replace /> : <LoginPage />} />
-        <Route path="/register" element={isLoggedIn ? <Navigate to="/daily" replace /> : <RegisterPage />} />
-        <Route path="/daily" element={isLoggedIn ? <DailyPage /> : <Navigate to="/login" replace />} />
-        <Route path="/weekly" element={isLoggedIn ? <WeeklyPage /> : <Navigate to="/login" replace />} />
-        <Route path="/" element={<Navigate to={isLoggedIn ? '/daily' : '/login'} replace />} />
-        <Route path="*" element={<Navigate to={isLoggedIn ? '/daily' : '/login'} replace />} />
+        <Route path="/login" element={needsAuth && isLoggedIn ? <Navigate to="/daily" replace /> : <LoginPage />} />
+        <Route path="/daily" element={needsAuth && !isLoggedIn ? <Navigate to="/login" replace /> : <DailyPage />} />
+        <Route path="/weekly" element={needsAuth && !isLoggedIn ? <Navigate to="/login" replace /> : <WeeklyPage />} />
+        <Route path="/" element={<Navigate to={needsAuth && !isLoggedIn ? '/login' : '/daily'} replace />} />
+        <Route path="*" element={<Navigate to={needsAuth && !isLoggedIn ? '/login' : '/daily'} replace />} />
       </Routes>
     </AnimatePresence>
   );

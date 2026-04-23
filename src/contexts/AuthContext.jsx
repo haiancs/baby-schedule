@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { getAuth, logout as cloudbaseLogout } from '../utils/cloudbase';
+import { CloudContext, auth } from '../cloudContext';
 
 const AuthContext = createContext(null);
 
@@ -9,7 +9,6 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const auth = getAuth();
         const loginState = await auth.getLoginState();
         setUser(loginState ? (auth.currentUser || true) : null);
       } catch {
@@ -21,7 +20,6 @@ export function AuthProvider({ children }) {
 
   const refreshUser = useCallback(async () => {
     try {
-      const auth = getAuth();
       const loginState = await auth.getLoginState();
       setUser(loginState ? (auth.currentUser || true) : null);
     } catch {
@@ -30,7 +28,11 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await cloudbaseLogout();
+    try {
+      await auth.signOut();
+    } catch (e) {
+      // ignore
+    }
     setUser(null);
   }, []);
 
@@ -54,6 +56,6 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
   return ctx;
 }

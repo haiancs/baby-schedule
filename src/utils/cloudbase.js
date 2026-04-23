@@ -1,31 +1,29 @@
-import cloudbase from '@cloudbase/js-sdk';
+import { useContext } from 'react';
+import { CloudContext, auth } from '../cloudContext';
 
-const ENV_ID = 'cloud1-9gaf7sks5b9ec073';
+export const useCloud = () => useContext(CloudContext);
 
-export const app = cloudbase.init({
-  env: ENV_ID,
-  timeout: 15000,
-  persistenceAuth: false,
-  forgetMs: 30000
-});
+export const getAuth = () => auth;
+export const getDb = () => useContext(CloudContext).database();
 
-export const getAuth = () => app.auth();
-
-export const getDb = () => app.database();
-
-export const callFunction = (name, data) => app.callFunction({
-  name,
-  data,
-  parse: true
-});
+export const callFunction = async (name, data) => {
+  try {
+    const res = useContext(CloudContext).callFunction({
+      name,
+      data
+    });
+    return res;
+  } catch (err) {
+    console.error('callFunction error:', err);
+    throw err;
+  }
+};
 
 export const logout = async () => {
   try {
-    await app.auth().signOut();
+    await auth.signOut();
   } catch (e) {
     // ignore
   }
   return { success: true };
 };
-
-export default { app, getAuth, getDb, logout };

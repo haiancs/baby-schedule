@@ -1,47 +1,32 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { callFunction } from '../utils/cloudbase';
-import { useAuth } from '../contexts/AuthContext';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { auth } from '../cloudContext';
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const { refreshUser } = useAuth();
+  const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError('');
-    if (!username.trim()) { setError('请输入用户名'); return; }
-    if (!password) { setError('请输入密码'); return; }
+  useEffect(() => {
+    checkLogin();
+  }, []);
 
-    setLoading(true);
+  const checkLogin = async () => {
     try {
-      const res = await callFunction('userauth', {
-        action: 'login',
-        username: username.trim(),
-        password
-      });
-
-      if (res.code !== 200) {
-        setError(res.message || '登录失败');
-        return;
+      const loginState = await auth.getLoginState();
+      if (loginState) {
+        navigate('/', { replace: true });
       }
-
-      await refreshUser();
     } catch (err) {
-      console.error('Login failed:', err);
-      setError('登录失败，请稍后重试');
-    } finally {
-      setLoading(false);
+      console.error('Check login failed:', err);
     }
+  };
+
+  const handleLogin = () => {
+    auth.toDefaultLoginPage();
   };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-blue-50 via-white to-amber-50/30">
       <div className="w-full max-w-sm mx-4">
-        {/* Logo & title */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-3xl shadow-sm border border-gray-100 mb-4">
             <span className="text-4xl">👶</span>
@@ -50,52 +35,20 @@ export default function LoginPage() {
           <p className="mt-1.5 text-sm text-gray-400">记录每一天的成长</p>
         </div>
 
-        {/* Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          {error && (
-            <div className="mb-4 p-3 text-sm text-red-600 bg-red-50 rounded-xl flex items-center gap-2">
-              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              {error}
-            </div>
-          )}
+          <button
+            onClick={handleLogin}
+            className="w-full py-3 px-4 bg-green-500 hover:bg-green-600 active:scale-[0.98] text-white font-semibold rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-green-500/20 flex items-center justify-center gap-3">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-6.656-6.088V8.89a5.718 5.718 0 0 0-.406-.032zm-2.53 3.274c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.969-.982z"/>
+            </svg>
+            <span>微信登录</span>
+          </button>
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1.5" htmlFor="username">用户名</label>
-              <input
-                id="username" type="text" required autoComplete="username" autoFocus
-                value={username} onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
-                placeholder="请输入用户名"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1.5" htmlFor="password">密码</label>
-              <input
-                id="password" type="password" required autoComplete="current-password"
-                value={password} onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
-                placeholder="请输入密码"
-              />
-            </div>
-
-            <button type="submit" disabled={loading}
-              className="w-full py-3 px-4 bg-gray-900 hover:bg-gray-800 active:scale-[0.98] text-white font-semibold rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-gray-900/20 disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center gap-2">
-              {loading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>登录中...</span>
-                </>
-              ) : '登 录'}
-            </button>
-          </form>
+          <p className="mt-4 text-xs text-center text-gray-400">
+            点击上方按钮即表示同意《用户协议》和《隐私政策》
+          </p>
         </div>
-
-        <p className="mt-5 text-center text-sm text-gray-400">
-          还没有账号？{' '}
-          <Link to="/register" className="text-blue-500 hover:text-blue-600 font-medium transition-colors">注册</Link>
-        </p>
       </div>
     </div>
   );

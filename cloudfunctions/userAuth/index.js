@@ -119,5 +119,23 @@ exports.main = async (event, context) => {
     }
   }
 
+  if (action === 'anonymous_login') {
+    try {
+      const { auth } = app;
+      const loginResult = await auth().signInAnonymously();
+      return {
+        code: 200,
+        message: '匿名登录成功',
+        data: {
+          openid: loginResult.openid || loginResult.userId,
+          isAnonymous: true
+        }
+      };
+    } catch (error) {
+      console.error('Anonymous login error:', error);
+      return { code: 500, message: '匿名登录失败', error: error.message };
+    }
+  }
+
   return { code: 400, message: '不支持的 action' };
 };
