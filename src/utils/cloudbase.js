@@ -1,10 +1,7 @@
-import cloudbaseSDK from "@cloudbase/js-sdk";
 import { cloud } from '../cloudContext';
 
-export const cloudbase = cloudbaseSDK.init({
-  env: import.meta.env.VITE_CLOUDBASE_ENV_ID,
-  region: import.meta.env.VITE_CLOUDBASE_REGION || 'ap-shanghai'
-});
+// 统一复用 cloudContext 的单例，避免出现多个 SDK 实例
+export const cloudbase = cloud;
 
 export { cloud };
 export const getAuth = () => cloud.auth();
