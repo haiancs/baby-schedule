@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { getDailyEvents, saveDailyEvents } from '../api/eventSync';
 import { useAuth } from '../contexts/AuthContext';
 import DailyTimeline from '../components/DailyTimeline';
+import BabyProfileModal from '../components/BabyProfileModal';
 import { Link } from 'react-router-dom';
 
 export const EVENT_META = {
@@ -99,6 +100,7 @@ export default function DailyPage() {
   const { logout } = useAuth();
   const [date, setDate] = useState(getTodayStr);
   const isToday = date === getTodayStr();
+  const [showProfile, setShowProfile] = useState(false);
 
   const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
@@ -237,6 +239,7 @@ export default function DailyPage() {
           <div className="flex items-center gap-2">
             {saving && <span className="text-xs text-gray-400">保存中...</span>}
             {justSaved && <span className="text-xs text-emerald-500 font-medium">已保存 ✓</span>}
+            <button onClick={() => setShowProfile(true)} className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors" title="宝宝信息">👶</button>
             <Link to="/weekly" className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">周报</Link>
             <button onClick={logout} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="退出登录">
               <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3-3l3-3m0 0l-3-3m3 3H9"/></svg>
@@ -399,6 +402,8 @@ export default function DailyPage() {
           )}
         </div>
       </main>
+
+      <BabyProfileModal isOpen={showProfile} onClose={() => setShowProfile(false)} />
     </div>
   );
 }

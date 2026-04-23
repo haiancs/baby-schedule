@@ -1,15 +1,18 @@
-import { useContext } from 'react';
-import { CloudContext, auth, cloud } from '../cloudContext';
+import cloudbaseSDK from "@cloudbase/js-sdk";
+import { cloud } from '../cloudContext';
 
-export const useCloud = () => useContext(CloudContext);
+export const cloudbase = cloudbaseSDK.init({
+  env: import.meta.env.VITE_CLOUDBASE_ENV_ID,
+  region: import.meta.env.VITE_CLOUDBASE_REGION,
+  accessKey: import.meta.env.VITE_CLOUDBASE_ACCESS_KEY
+});
 
-export const getAuth = () => auth;
-// 不使用 useContext，直接使用全局导出的 cloud 实例
+export { cloud };
+export const getAuth = () => cloud.auth();
 export const getDb = () => cloud.database();
 
 export const callFunction = async (name, data) => {
   try {
-    // 不使用 useContext，直接使用全局导出的 cloud 实例
     const res = await cloud.callFunction({
       name,
       data
@@ -23,7 +26,7 @@ export const callFunction = async (name, data) => {
 
 export const logout = async () => {
   try {
-    await auth.signOut();
+    await cloud.auth().signOut();
   } catch (e) {
     // ignore
   }
