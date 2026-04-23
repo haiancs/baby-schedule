@@ -102,9 +102,9 @@ export default function AIAnalysisModal({ isOpen, onClose }) {
 
       const res = await cloudbase
         .ai()
-        .createModel('minimax-custom')
+        .createModel('deepseek')
         .streamText({
-          model: 'minimax-m2.7',
+          model: 'deepseek-v3.2',
           messages: [{ role: 'user', content: prompt }]
         });
 
