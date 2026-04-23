@@ -1,14 +1,16 @@
 import { useContext } from 'react';
-import { CloudContext, auth } from '../cloudContext';
+import { CloudContext, auth, cloud } from '../cloudContext';
 
 export const useCloud = () => useContext(CloudContext);
 
 export const getAuth = () => auth;
-export const getDb = () => useContext(CloudContext).database();
+// 不使用 useContext，直接使用全局导出的 cloud 实例
+export const getDb = () => cloud.database();
 
 export const callFunction = async (name, data) => {
   try {
-    const res = useContext(CloudContext).callFunction({
+    // 不使用 useContext，直接使用全局导出的 cloud 实例
+    const res = await cloud.callFunction({
       name,
       data
     });
