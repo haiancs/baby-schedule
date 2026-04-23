@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getAuth } from '../utils/cloudbase';
+import { callFunction } from '../utils/cloudbase';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function LoginPage() {
@@ -18,19 +18,21 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const auth = getAuth();
-      await auth.signInWithUsernameAndPassword(username.trim(), password);
+      const res = await callFunction('userauth', {
+        action: 'login',
+        username: username.trim(),
+        password
+      });
+
+      if (res.code !== 200) {
+        setError(res.message || '登录失败');
+        return;
+      }
+
       await refreshUser();
     } catch (err) {
       console.error('Login failed:', err);
-      const msg = err?.message || '';
-      if (msg.includes('not found') || msg.includes('password') || msg.includes('invalid')) {
-        setError('用户名或密码错误');
-      } else if (msg.includes('network') || msg.includes('timeout')) {
-        setError('网络连接失败，请稍后重试');
-      } else {
-        setError(msg || '登录失败，请重试');
-      }
+      setError('登录失败，请稍后重试');
     } finally {
       setLoading(false);
     }

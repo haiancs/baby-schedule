@@ -7,6 +7,6 @@
     "test": "node test.js"
   },
   "dependencies": {
-    "@cloudbase/node-sdk": "^2.11.2"
+    "@cloudbase/node-sdk": "latest"
   }
 }

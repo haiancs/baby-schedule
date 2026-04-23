@@ -8,6 +8,11 @@ export const getAuth = () => app.auth();
 
 export const getDb = () => app.database();
 
+export const callFunction = (name, data) => app.callFunction({
+  name,
+  data
+});
+
 export const logout = async () => {
   await app.auth().signOut();
   return { success: true };

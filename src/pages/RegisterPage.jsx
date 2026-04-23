@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getAuth } from '../utils/cloudbase';
+import { callFunction } from '../utils/cloudbase';
 
 export default function RegisterPage() {
   const [username, setUsername] = useState('');
@@ -23,20 +23,22 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      const auth = getAuth();
-      await auth.signUpWithUsernameAndPassword(trimmed, password);
+      const res = await callFunction('userauth', {
+        action: 'register',
+        username: trimmed,
+        password
+      });
+
+      if (res.code !== 200) {
+        setError(res.message || '注册失败，请重试');
+        return;
+      }
+
       setSuccess(true);
       setTimeout(() => navigate('/login'), 1500);
     } catch (err) {
       console.error('Register failed:', err);
-      const msg = err?.message || '';
-      if (msg.includes('exist')) {
-        setError('该用户名已被注册');
-      } else if (msg.includes('network') || msg.includes('timeout')) {
-        setError('网络连接失败，请稍后重试');
-      } else {
-        setError(msg || '注册失败，请重试');
-      }
+      setError('注册失败，请稍后重试');
     } finally {
       setLoading(false);
     }

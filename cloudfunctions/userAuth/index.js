@@ -14,7 +14,6 @@ exports.main = async (event, context) => {
     }
 
     try {
-      // 查询白名单集合 allowed_users
       const userRef = db.collection('allowed_users').where({
         username: username
       });
@@ -29,26 +28,21 @@ exports.main = async (event, context) => {
         return { code: 409, message: '用户已注册，请勿重复注册' };
       }
 
-      // 生成邮箱映射
       const email = `${username}@baby.local`;
-      
-      // 创建新用户 (使用 createUser 或 signUpWithEmailAndPassword 取决于 SDK 版本)
-      // 注意：这里使用 Node SDK 的管理 API
       const { auth } = app;
       const userResult = await auth().createUser({
         email: email,
         password: password
       });
 
-      // 更新白名单用户状态为已注册
       await db.collection('allowed_users').doc(userData._id).update({
         isRegistered: true,
         uid: userResult.uid || '',
         updatedAt: new Date()
       });
 
-      return { 
-        code: 200, 
+      return {
+        code: 200,
         message: '注册成功',
         data: {
           username,
@@ -58,6 +52,26 @@ exports.main = async (event, context) => {
       };
     } catch (error) {
       return { code: 500, message: '注册失败', error: error.message };
+    }
+  }
+
+  if (action === 'login') {
+    if (!username || !password) {
+      return { code: 400, message: '用户名或密码不能为空' };
+    }
+
+    try {
+      const email = `${username}@baby.local`;
+      const { auth } = app;
+      await auth().signInWithEmailAndPassword(email, password);
+
+      return {
+        code: 200,
+        message: '登录成功',
+        data: { username }
+      };
+    } catch (error) {
+      return { code: 401, message: '用户名或密码错误' };
     }
   }
 
