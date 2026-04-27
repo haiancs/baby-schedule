@@ -1,27 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { POOP_COLORS, POINT_EVENT_TYPES, DURATION_EVENT_TYPES } from '../pages/DailyPage';
 
-function errorFunctionApprox(x) {
-  const sign = x < 0 ? -1 : 1;
-  return sign * Math.sqrt(1 - Math.exp(-1.239 * x * x));
-}
-
-function calculateFisheyeX(x, focusX, sigma, amplitude) {
-  if (focusX === null) return x;
-  const sSqrt2 = sigma * Math.SQRT2;
-  const constant = amplitude * sigma * Math.sqrt(Math.PI / 2);
-  const erfX = errorFunctionApprox((x - focusX) / sSqrt2);
-  const erf0 = errorFunctionApprox((0 - focusX) / sSqrt2);
-  return x + constant * (erfX - erf0);
-}
-
-function normalizeFisheyeX(x, focusX, sigma, amplitude, width) {
-  if (focusX === null) return x;
-  const rawX = calculateFisheyeX(x, focusX, sigma, amplitude);
-  const rawWidth = calculateFisheyeX(width, focusX, sigma, amplitude);
-  return (rawX / rawWidth) * width;
-}
-
 const LANE_CONFIG = [
   { key: 'sleep',  label: '😴 睡觉',   y: 55,  color: '#818CF8', bgColor: 'rgba(129,140,248,0.08)' },
   { key: 'feed',   label: '🍼 喂奶',   y: 115, color: '#F59E0B', bgColor: 'rgba(245,158,11,0.08)' },
@@ -45,7 +24,7 @@ function formatRatingLabel(val) {
   return `${Math.floor(val)}½`;
 }
 
-export default function DailyTimeline({ events, date, onEventUpdate, onEventAdd }) {
+export default function DailyTimeline({ events, date, onEventUpdate, onEventAdd, onNavigateDate }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -54,32 +33,31 @@ export default function DailyTimeline({ events, date, onEventUpdate, onEventAdd 
     rating: 1, poopColor: null, amountMl: 60,
   });
 
-  const [focalTime, setFocalTime] = useState(null);
   const animationRef = useRef(null);
-  const [amplitude, setAmplitude] = useState(0);
-  const targetAmplitudeRef = useRef(0);
 
   const dragStateRef = useRef({
     active: false, eventId: null, dragType: null,
     initialX: 0, initialHour: 0, initialDuration: 1, hasMoved: false,
   });
 
-  const getHourFromX = useCallback((targetX, width, focalTimeHour, amp) => {
+  const panStateRef = useRef({
+    active: false, startX: 0, hasPanned: false,
+  });
+
+  // 同步最新的 props 到 ref，避免 Canvas 动画循环闭包陈旧
+  const eventsRef = useRef(events);
+  const dateRef = useRef(date);
+  const onNavigateDateRef = useRef(onNavigateDate);
+  eventsRef.current = events;
+  dateRef.current = date;
+  onNavigateDateRef.current = onNavigateDate;
+
+  const getHourFromX = useCallback((targetX, width) => {
     const canvasX = targetX - LABEL_WIDTH;
     const canvasWidth = width - LABEL_WIDTH;
     if (canvasX < 0) return 0;
     if (canvasX > canvasWidth) return TOTAL_HOURS;
-    if (focalTimeHour === null || amp === 0) return (canvasX / canvasWidth) * TOTAL_HOURS;
-    let low = 0, high = TOTAL_HOURS, best = 0;
-    for (let i = 0; i < 20; i++) {
-      const mid = (low + high) / 2;
-      const linearX = (mid / TOTAL_HOURS) * canvasWidth;
-      const focusX = (focalTimeHour / TOTAL_HOURS) * canvasWidth;
-      const mappedX = normalizeFisheyeX(linearX, focusX, canvasWidth / 6, amp, canvasWidth);
-      if (mappedX < canvasX) low = mid; else high = mid;
-      best = mid;
-    }
-    return best;
+    return (canvasX / canvasWidth) * TOTAL_HOURS;
   }, []);
 
   const snapHourTo15Min = (hour) => Math.round(hour * 4) / 4;
@@ -97,22 +75,37 @@ export default function DailyTimeline({ events, date, onEventUpdate, onEventAdd 
       const dpr = window.devicePixelRatio || 1;
       canvas.width = rect.width * dpr;
       canvas.height = rect.height * dpr;
-      ctx.scale(dpr, dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       canvas.style.width = `${rect.width}px`;
       canvas.style.height = `${rect.height}px`;
     };
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
+    // roundRect 兼容性回退
+    const drawRoundRect = (x, y, w, h, r) => {
+      if (ctx.roundRect) {
+        ctx.roundRect(x, y, w, h, r);
+        return;
+      }
+      const radius = Math.min(r, w / 2, h / 2);
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + w - radius, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+      ctx.lineTo(x + w, y + h - radius);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+      ctx.lineTo(x + radius, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    };
+
     const render = () => {
       const rect = container.getBoundingClientRect();
       const width = rect.width;
       const height = rect.height;
       const cw = width - LABEL_WIDTH;
-
-      const diff = targetAmplitudeRef.current - amplitude;
-      const newAmp = amplitude + diff * 0.15;
-      setAmplitude(newAmp);
 
       ctx.clearRect(0, 0, width, height);
 
@@ -127,11 +120,7 @@ export default function DailyTimeline({ events, date, onEventUpdate, onEventAdd 
         ctx.fillText(lane.label, 4, lane.y + (LANE_HEIGHT - 16) / 2);
       });
 
-      const getX = (hour) => {
-        const lx = (hour / TOTAL_HOURS) * cw;
-        const fx = focalTime !== null ? (focalTime / TOTAL_HOURS) * cw : null;
-        return LABEL_WIDTH + normalizeFisheyeX(lx, fx, cw / 6, newAmp, cw);
-      };
+      const getX = (hour) => LABEL_WIDTH + (hour / TOTAL_HOURS) * cw;
 
       // Grid
       ctx.textAlign = 'center';
@@ -143,13 +132,13 @@ export default function DailyTimeline({ events, date, onEventUpdate, onEventAdd 
         ctx.lineWidth = 1; ctx.stroke();
         ctx.fillStyle = (h >= 7 && h <= 21) ? '#6B7280' : '#D1D5DB';
         ctx.font = '11px ui-sans-serif, system-ui, -apple-system, sans-serif';
-        if (h % 2 === 0 || newAmp > 0.5) ctx.fillText(`${String(h).padStart(2, '0')}:00`, x, 16);
+        if (h % 2 === 0) ctx.fillText(`${String(h).padStart(2, '0')}:00`, x, 16);
       }
 
       // "Now" indicator
       const now = new Date();
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      if (date === todayStr) {
+      if (dateRef.current === todayStr) {
         const nh = now.getHours() + now.getMinutes() / 60;
         const nx = getX(nh);
         ctx.beginPath(); ctx.moveTo(nx, 42); ctx.lineTo(nx, height);
@@ -163,7 +152,7 @@ export default function DailyTimeline({ events, date, onEventUpdate, onEventAdd 
       }
 
       // Events
-      events.forEach(evt => {
+      eventsRef.current.forEach(evt => {
         const d = new Date(evt.startTime);
         const sh = d.getHours() + d.getMinutes() / 60;
         const x = getX(sh);
@@ -177,10 +166,10 @@ export default function DailyTimeline({ events, date, onEventUpdate, onEventAdd 
           const lc = LANE_CONFIG.find(l => l.key === evt.type);
           ctx.fillStyle = lc?.color || '#818CF8';
           ctx.globalAlpha = dragStateRef.current.eventId === evt.id ? 0.9 : 0.75;
-          ctx.beginPath(); ctx.roundRect(x, y, w, LANE_HEIGHT - 16, 8); ctx.fill();
+          ctx.beginPath(); drawRoundRect(x, y, w, LANE_HEIGHT - 16, 8); ctx.fill();
           // resize handle
           ctx.fillStyle = '#fff';
-          ctx.beginPath(); ctx.roundRect(x + w - 6, y + (LANE_HEIGHT - 16) / 2 - 8, 4, 16, 2); ctx.fill();
+          ctx.beginPath(); drawRoundRect(x + w - 6, y + (LANE_HEIGHT - 16) / 2 - 8, 4, 16, 2); ctx.fill();
           // duration label
           if (w > 40) {
             ctx.fillStyle = 'rgba(255,255,255,0.9)';
@@ -257,24 +246,22 @@ export default function DailyTimeline({ events, date, onEventUpdate, onEventAdd 
       window.removeEventListener('resize', resizeCanvas);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  });
+  }, []);
 
   // ─── Pointer events ───
   const handlePointerDown = (e) => {
     const rect = containerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left, y = e.clientY - rect.top;
     const width = rect.width, cw = width - LABEL_WIDTH;
-    const amp = amplitude;
 
-    for (let i = events.length - 1; i >= 0; i--) {
-      const evt = events[i];
+    for (let i = eventsRef.current.length - 1; i >= 0; i--) {
+      const evt = eventsRef.current[i];
       const d = new Date(evt.startTime);
       const sh = d.getHours() + d.getMinutes() / 60;
       const dur = evt.duration || 1;
       const eh = sh + dur;
-      const fp = focalTime !== null ? (focalTime / TOTAL_HOURS) * cw : null;
-      const evtX = LABEL_WIDTH + normalizeFisheyeX((sh / TOTAL_HOURS) * cw, fp, cw / 6, amp, cw);
-      const evtEndX = LABEL_WIDTH + normalizeFisheyeX((eh / TOTAL_HOURS) * cw, fp, cw / 6, amp, cw);
+      const evtX = LABEL_WIDTH + (sh / TOTAL_HOURS) * cw;
+      const evtEndX = LABEL_WIDTH + (eh / TOTAL_HOURS) * cw;
       const evtY = LANE_Y[evt.type] || 55;
 
       let isHit = false, hitDragType = 'move';
@@ -302,10 +289,9 @@ export default function DailyTimeline({ events, date, onEventUpdate, onEventAdd 
       }
     }
 
+    // 点击空白区域：开始 pan（用于左右滑动切换日期）
     setPopoverState(p => ({ ...p, visible: false }));
-    const hour = getHourFromX(x, width, focalTime, amp);
-    setFocalTime(hour);
-    targetAmplitudeRef.current = 2.5;
+    panStateRef.current = { active: true, startX: x, hasPanned: false };
     e.target.setPointerCapture(e.pointerId);
   };
 
@@ -313,18 +299,18 @@ export default function DailyTimeline({ events, date, onEventUpdate, onEventAdd 
     const rect = containerRef.current.getBoundingClientRect();
     const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
     const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
-    const width = rect.width, amp = amplitude;
+    const width = rect.width;
 
     if (dragStateRef.current.active) {
       if (!dragStateRef.current.hasMoved && (Math.abs(x - dragStateRef.current.initialX) > 5 || Math.abs(y - dragStateRef.current.initialY) > 5)) {
         dragStateRef.current.hasMoved = true;
       }
       const { initialX, initialHour, initialDuration, eventId, dragType, hasMoved } = dragStateRef.current;
-      const ce = events.find(ev => ev.id === eventId);
+      const ce = eventsRef.current.find(ev => ev.id === eventId);
       if (ce && POINT_EVENT_TYPES.includes(ce.type) && !hasMoved) return;
 
-      const delta = getHourFromX(x, width, focalTime, amp) - getHourFromX(initialX, width, focalTime, amp);
-      const ev = events.find(ev => ev.id === eventId);
+      const delta = getHourFromX(x, width) - getHourFromX(initialX, width);
+      const ev = eventsRef.current.find(ev => ev.id === eventId);
       if (ev && onEventUpdate) {
         if (dragType === 'move') {
           const ns = snapHourTo15Min(initialHour + delta);
@@ -339,13 +325,23 @@ export default function DailyTimeline({ events, date, onEventUpdate, onEventAdd 
       return;
     }
 
-    if (focalTime !== null) setFocalTime(getHourFromX(x, width, focalTime, amp));
+    // 空白区域 pan：水平拖动超过阈值切换日期
+    if (panStateRef.current.active && !panStateRef.current.hasPanned) {
+      const dx = x - panStateRef.current.startX;
+      const threshold = 80;
+      if (Math.abs(dx) > threshold) {
+        panStateRef.current.hasPanned = true;
+        if (onNavigateDateRef.current) {
+          onNavigateDateRef.current(dx > 0 ? -1 : 1);
+        }
+      }
+    }
   };
 
   const handlePointerUp = (e) => {
     if (dragStateRef.current.active) {
       const { eventId, hasMoved, initialX, initialY } = dragStateRef.current;
-      const evt = events.find(ev => ev.id === eventId);
+      const evt = eventsRef.current.find(ev => ev.id === eventId);
 
       // Show popover on click (not drag) for configurable point events
       if (evt && !hasMoved && ['feed', 'food', 'poop'].includes(evt.type)) {
@@ -359,10 +355,13 @@ export default function DailyTimeline({ events, date, onEventUpdate, onEventAdd 
       }
       dragStateRef.current.active = false;
       dragStateRef.current.eventId = null;
-    } else {
-      targetAmplitudeRef.current = 0;
-      setTimeout(() => setFocalTime(null), 500);
     }
+
+    // 结束空白区域 pan
+    if (panStateRef.current.active) {
+      panStateRef.current.active = false;
+    }
+
     e.target.releasePointerCapture(e.pointerId);
   };
 
@@ -373,8 +372,8 @@ export default function DailyTimeline({ events, date, onEventUpdate, onEventAdd 
     const type = e.dataTransfer.getData('text/plain');
     if (!POINT_EVENT_TYPES.includes(type)) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const snapped = snapHourTo15Min(getHourFromX(e.clientX - rect.left, rect.width, focalTime, amplitude));
-    const dd = date ? new Date(date + 'T00:00:00') : new Date();
+    const snapped = snapHourTo15Min(getHourFromX(e.clientX - rect.left, rect.width));
+    const dd = dateRef.current ? new Date(dateRef.current + 'T00:00:00') : new Date();
     dd.setHours(Math.floor(snapped), (snapped % 1) * 60, 0, 0);
     if (onEventAdd) {
       onEventAdd({
@@ -391,7 +390,7 @@ export default function DailyTimeline({ events, date, onEventUpdate, onEventAdd 
 
   return (
     <div ref={containerRef}
-      className="absolute inset-0 rounded-2xl overflow-hidden cursor-crosshair touch-none"
+      className="absolute inset-0 rounded-2xl overflow-hidden cursor-crosshair touch-none select-none"
       onPointerDown={handlePointerDown} onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp}
       onContextMenu={(e) => e.preventDefault()}

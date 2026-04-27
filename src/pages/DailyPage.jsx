@@ -323,7 +323,7 @@ export default function DailyPage() {
 
         {/* Timeline */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm relative min-h-[540px]">
-          <DailyTimeline events={events} date={date} onEventUpdate={handleEventUpdate} onEventAdd={handleEventAddFromCanvas} />
+          <DailyTimeline events={events} date={date} onEventUpdate={handleEventUpdate} onEventAdd={handleEventAddFromCanvas} onNavigateDate={navigateDate} />
         </div>
 
         {/* Event List */}
